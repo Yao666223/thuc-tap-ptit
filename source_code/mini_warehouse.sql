@@ -100,3 +100,13 @@ SELECT * FROM phieu_nhap;
 SELECT * FROM chi_tiet_nhap;
 SELECT * FROM phieu_xuat;
 SELECT * FROM chi_tiet_phieu_xuat;
+
+use mini_warehouse;
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'nhanvien'
+);
+INSERT INTO users (username, password, role) VALUES
+('nv1', MD5('nv123'), 'nhanvien');
