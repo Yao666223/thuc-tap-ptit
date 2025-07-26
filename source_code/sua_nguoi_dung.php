@@ -37,7 +37,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
   $password = $_POST['password'];
 
   // Không cho đổi role nếu đang sửa chính mình
-  if ($user['username'] === $_SESSION['user'] && $role !== 'admin') {
+  if (isset($_SESSION['username']) && $user['username'] === $_SESSION['username'] && $role !== 'admin')
+ {
     $error = "❌ Bạn không thể tự đổi vai trò của chính mình!";
   } else {
     // Cập nhật username và role
