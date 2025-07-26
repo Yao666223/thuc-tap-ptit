@@ -1,4 +1,8 @@
-
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -54,8 +58,7 @@
   <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
   <a href="tao_nguoi_dung.php">➕ Tạo nhân viên</a>
 <?php endif; ?>
-
-  <?php if ($_SESSION['role'] === 'admin'): ?>
+  <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
   <a href="nguoi_dung.php">👥 Quản lý người dùng</a>
 <?php endif; ?>
 
