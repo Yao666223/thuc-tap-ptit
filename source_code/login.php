@@ -1,7 +1,8 @@
 <?php
 session_start();
 include 'db_connect.php';
-
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 $error = '';
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
@@ -18,7 +19,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if (password_verify($password, $user['password'])) {
             // Lưu session
-            $_SESSION['user'] = $user['username'];
+            $_SESSION['username'] = $user['username'];
+
             $_SESSION['role'] = $user['role'];
 
             // Chuyển đến dashboard
@@ -65,7 +67,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     </div>
   </div>
 
-  <p class="text-center text-muted mt-3 small">Tài khoản mẫu: admin / admin123, nv1 / nv123</p>
 </div>
 
 </body>
