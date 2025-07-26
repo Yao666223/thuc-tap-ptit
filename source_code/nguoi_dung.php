@@ -14,7 +14,7 @@ if ($_SESSION['role'] !== 'admin') {
 if (isset($_GET['delete'])) {
     $delete_user = $_GET['delete'];
 
-    if ($delete_user !== $_SESSION['user']) {
+    if ($delete_user !== $_SESSION['username']) {
         $stmt = $conn->prepare("DELETE FROM users WHERE username = ?");
         $stmt->bind_param("s", $delete_user);
         $stmt->execute();
@@ -52,7 +52,7 @@ $result = $conn->query("SELECT * FROM users ORDER BY id DESC");
             <a href="sua_nguoi_dung.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Sửa</a>
 
             <!-- Nút xoá chỉ hiện nếu không phải chính mình -->
-            <?php if ($row['username'] !== $_SESSION['user']): ?>
+            <?php if ($row['username'] !== $_SESSION['username']): ?>
                 <a href="nguoi_dung.php?delete=<?= $row['username'] ?>" class="btn btn-danger btn-sm"
                 onclick="return confirm('Bạn có chắc muốn xoá người dùng này không?')">Xoá</a>
             <?php endif; ?>
