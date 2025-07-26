@@ -1,4 +1,4 @@
-<!-- source_code/admin_layout.php -->
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -60,9 +60,9 @@
 <?php endif; ?>
 
   <hr>
-  <?php if (isset($_SESSION['user'])): ?>
+  <?php if (isset($_SESSION['username'])): ?>
     <div class="text-white small mt-3">
-      👤 <?= $_SESSION['user'] ?> (<?= $_SESSION['role'] ?>)<br>
+      👤 <?= $_SESSION['username'] ?> (<?= $_SESSION['role'] ?>)<br>
       <a href="logout.php" class="text-decoration-underline text-white">Đăng xuất</a>
     </div>
   <?php endif; ?>
