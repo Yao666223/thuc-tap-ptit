@@ -127,3 +127,21 @@ CREATE TABLE IF NOT EXISTS stock_changes (
   INDEX idx_sanph(id),
   INDEX idx_created_at (created_at)
 );
+
+-- 1. Thêm cột created_by (lưu id của users)
+ALTER TABLE phieu_nhap ADD COLUMN created_by INT NULL;
+ALTER TABLE phieu_xuat ADD COLUMN created_by INT NULL;
+
+-- 2. (Tùy) gán giá trị mặc định cho các record hiện có (vd: user 'admin')
+-- Lấy id admin (nếu có)
+SELECT id FROM users WHERE username = 'admin' LIMIT 1;
+-- Giả sử id admin = 1, bạn chạy:
+UPDATE phieu_nhap SET created_by = 12 WHERE created_by IS NULL;
+UPDATE phieu_xuat SET created_by = 12 WHERE created_by IS NULL;
+
+-- 3. (Tùy) thêm foreign key để đảm bảo ràng buộc
+ALTER TABLE phieu_nhap
+  ADD CONSTRAINT fk_phieu_nhap_user FOREIGN KEY (created_by) REFERENCES users(id);
+
+ALTER TABLE phieu_xuat
+  ADD CONSTRAINT fk_phieu_xuat_user FOREIGN KEY (created_by) REFERENCES users(id);
