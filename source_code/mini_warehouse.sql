@@ -110,3 +110,20 @@ CREATE TABLE users (
 );
 INSERT INTO users (username, password, role) VALUES
 ('nv1', MD5('nv123'), 'nhanvien');
+
+USE mini_warehouse;
+
+CREATE TABLE IF NOT EXISTS stock_changes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  san_pham_id INT NOT NULL,
+  change_qty INT NOT NULL,
+  change_type ENUM('nhap','xuat','adjust') NOT NULL,
+  ref_table VARCHAR(50) DEFAULT NULL,
+  ref_id INT DEFAULT NULL,
+  user_id INT DEFAULT NULL,
+  note VARCHAR(255),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (san_pham_id) REFERENCES san_pham(id),
+  INDEX idx_sanph(id),
+  INDEX idx_created_at (created_at)
+);
