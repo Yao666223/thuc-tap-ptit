@@ -1,145 +1,168 @@
 <?php
-include '../includes/session_check.php';
-include '../includes/layouts/admin_layout.php';
-include '../includes/db_connect.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+include __DIR__ . '/../includes/session_check.php';   // chỉnh đường dẫn nếu cần
+include __DIR__ . '/../includes/db_connect.php';
+include __DIR__ . '/../includes/layouts/admin_layout.php';
 
-$errors = [];
-$success = "";
-
-// Lấy danh sách sản phẩm
-$san_pham_result = $conn->query("SELECT * FROM san_pham ORDER BY ten_san_pham ASC");
-$san_pham_list = [];
-while ($sp = $san_pham_result->fetch_assoc()) {
-    $san_pham_list[$sp['id']] = $sp;
-}
-
-// Xử lý khi submit
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $ghi_chu = trim($_POST['ghi_chu']);
-    $ten_sp_arr = $_POST['ten_san_pham'];
-    $gia_arr = $_POST['gia'];
-    $so_luong_arr = $_POST['so_luong'];
-    $don_vi_arr = $_POST['don_vi'];
-
-    // Tạo phiếu nhập
-    $stmt = $conn->prepare("INSERT INTO phieu_nhap (ngay_tao, ghi_chu) VALUES (NOW(), ?)");
-    $stmt->bind_param("s", $ghi_chu);
-    $stmt->execute();
-    $id_phieu = $stmt->insert_id;
-    $stmt->close();
-
-    for ($i = 0; $i < count($ten_sp_arr); $i++) {
-        $ten = trim($ten_sp_arr[$i]);
-        $gia = floatval($gia_arr[$i]);
-        $so_luong = intval($so_luong_arr[$i]);
-        $don_vi = trim($don_vi_arr[$i]);
-
-        // Kiểm tra sản phẩm có tồn tại không (theo tên)
-        $res = $conn->query("SELECT * FROM san_pham WHERE ten_san_pham = '$ten'");
-        if ($res->num_rows > 0) {
-            $row = $res->fetch_assoc();
-            $id_sp = $row['id'];
-
-            // Cập nhật số lượng và giá
-            $conn->query("UPDATE san_pham SET so_luong = so_luong + $so_luong, gia = $gia WHERE id = $id_sp");
-        } else {
-            // Thêm mới sản phẩm
-            $stmt = $conn->prepare("INSERT INTO san_pham (ten_san_pham, gia, so_luong, don_vi) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("sdis", $ten, $gia, $so_luong, $don_vi);
-            $stmt->execute();
-            $id_sp = $stmt->insert_id;
-            $stmt->close();
-        }
-
-        // Thêm chi tiết nhập
-        $stmt = $conn->prepare("INSERT INTO chi_tiet_nhap (id_phieu_nhap, id_san_pham, so_luong, gia) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("iiid", $id_phieu, $id_sp, $so_luong, $gia);
-        $stmt->execute();
-        $stmt->close();
-    }
-
-    $success = "✅ Phiếu nhập đã được lưu, dữ liệu đã cập nhật.";
+// Lấy danh sách sản phẩm để populate dropdown
+$products = [];
+$res = $conn->query("SELECT id, ten_san_pham, gia, so_luong, don_vi FROM san_pham ORDER BY ten_san_pham ASC");
+if ($res) {
+    while ($r = $res->fetch_assoc()) $products[] = $r;
 }
 ?>
 
 <div class="container mt-4">
-  <h3 class="text-success fw-bold">📥 Nhập kho sản phẩm</h3>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4>📥 Nhập kho</h4>
+    <a href="phieu_nhap_list.php" class="btn btn-outline-secondary">Danh sách phiếu nhập</a>
+  </div>
 
-  <?php if ($success): ?>
-    <div class="alert alert-success"><?= $success ?></div>
-  <?php endif; ?>
-
-  <form method="post">
+  <form id="formNhap" method="post" action="luu_nhap_kho.php" onsubmit="return prepareAndValidate();">
     <div class="mb-3">
       <label class="form-label">Ghi chú</label>
-      <input type="text" name="ghi_chu" class="form-control" placeholder="Nhập ghi chú nếu cần...">
+      <input type="text" name="ghi_chu" class="form-control" placeholder="Ghi chú (ví dụ: Nhập hàng từ NCC A)">
     </div>
 
-    <div id="product-area">
-      <div class="row g-2 product-row align-items-end mb-2">
-        <div class="col-md-3">
-          <label>Tên sản phẩm</label>
-          <input list="ten_sp_list" name="ten_san_pham[]" class="form-control ten-sp" required>
-          <datalist id="ten_sp_list">
-            <?php foreach ($san_pham_list as $sp): ?>
-              <option value="<?= $sp['ten_san_pham'] ?>">
-            <?php endforeach; ?>
-          </datalist>
-        </div>
-        <div class="col-md-2">
-          <label>Giá nhập</label>
-          <input type="number" step="100" name="gia[]" class="form-control gia" required>
-        </div>
-        <div class="col-md-2">
-          <label>Số lượng</label>
-          <input type="number" min="1" name="so_luong[]" class="form-control" required>
-        </div>
-        <div class="col-md-2">
-          <label>Đơn vị</label>
-          <input type="text" name="don_vi[]" class="form-control" placeholder="ví dụ: gói, hộp..." required>
-        </div>
-        <div class="col-md-2">
-          <button type="button" class="btn btn-danger remove-product">❌</button>
-        </div>
-      </div>
+    <div class="table-responsive">
+      <table class="table table-bordered" id="tblItems">
+        <thead class="table-dark">
+          <tr>
+            <th style="width:40%;">Sản phẩm</th>
+            <th style="width:15%;">Số lượng</th>
+            <th style="width:20%;">Giá (vnđ)</th>
+            <th style="width:15%;">Đơn vị</th>
+            <th style="width:10%;">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 1 row mẫu -->
+          <tr>
+            <td>
+              <select class="form-select product-select" name="product_id[]">
+                <option value="0">-- Thêm sản phẩm mới --</option>
+                <?php foreach ($products as $p): ?>
+                  <option value="<?= $p['id'] ?>" data-price="<?= htmlspecialchars($p['gia']) ?>" data-donvi="<?= htmlspecialchars($p['don_vi']) ?>">
+                    <?= htmlspecialchars($p['ten_san_pham']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+
+              <!-- nếu chọn thêm mới: hiển thị ô nhập -->
+              <input type="text" class="form-control mt-2 d-none new-name" name="ten_san_pham_new[]" placeholder="Tên sản phẩm mới">
+              <input type="text" class="form-control mt-2 d-none new-donvi" name="don_vi[]" placeholder="Đơn vị (ví dụ: cái, kg)">
+            </td>
+            <td><input type="number" min="1" name="qty[]" class="form-control qty-input" value="1"></td>
+            <td><input type="number" min="0" step="0.01" name="price[]" class="form-control price-input" value="0"></td>
+            <td class="text-center unit-cell">-</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-danger btn-remove">Xóa</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <button type="button" class="btn btn-secondary" id="add-product">+ Thêm sản phẩm</button>
-    <br><br>
-    <button type="submit" class="btn btn-success">💾 Lưu phiếu nhập</button>
-    <a href="dashboard.php" class="btn btn-outline-dark ms-2">⬅ Quay lại</a>
+    <div class="mb-3">
+      <button id="btnAdd" type="button" class="btn btn-outline-primary btn-sm">+ Thêm dòng</button>
+      <button type="submit" class="btn btn-success">Lưu phiếu nhập</button>
+    </div>
   </form>
 </div>
 
 <script>
-const productList = <?= json_encode($san_pham_list) ?>;
-
-document.getElementById('add-product').addEventListener('click', function () {
-  const container = document.getElementById('product-area');
-  const row = container.querySelector('.product-row').cloneNode(true);
-
-  row.querySelectorAll('input').forEach(input => input.value = '');
-  container.appendChild(row);
-});
-
-document.addEventListener('click', function (e) {
-  if (e.target.classList.contains('remove-product')) {
-    const rows = document.querySelectorAll('.product-row');
-    if (rows.length > 1) e.target.closest('.product-row').remove();
+  // helper: clone row
+  function addRow() {
+    const tbody = document.querySelector('#tblItems tbody');
+    const tr = tbody.querySelector('tr').cloneNode(true);
+    // reset values
+    tr.querySelectorAll('input').forEach(i => {
+      if (i.name === 'qty[]') i.value = 1;
+      else i.value = '';
+    });
+    // reset selects
+    const sel = tr.querySelector('select.product-select');
+    sel.selectedIndex = 0;
+    tr.querySelector('.unit-cell').textContent = '-';
+    tr.querySelector('.new-name').classList.add('d-none');
+    tr.querySelector('.new-donvi').classList.add('d-none');
+    tbody.appendChild(tr);
   }
-});
 
-document.addEventListener('input', function (e) {
-  if (e.target.classList.contains('ten-sp')) {
-    const ten = e.target.value;
-    const row = e.target.closest('.product-row');
-    const giaInput = row.querySelector('.gia');
-    for (let id in productList) {
-      if (productList[id]['ten_san_pham'] === ten) {
-        giaInput.value = productList[id]['gia'];
-        break;
+  document.getElementById('btnAdd').addEventListener('click', addRow);
+
+  // delegate remove & product change
+  document.querySelector('#tblItems tbody').addEventListener('click', function(e){
+    if (e.target.classList.contains('btn-remove')) {
+      const row = e.target.closest('tr');
+      // if only one row, reset fields instead of removing
+      if (document.querySelectorAll('#tblItems tbody tr').length === 1) {
+        row.querySelectorAll('input').forEach(i=> i.value = '');
+        row.querySelector('select.product-select').selectedIndex = 0;
+        row.querySelector('.unit-cell').textContent = '-';
+        row.querySelector('.new-name').classList.add('d-none');
+        row.querySelector('.new-donvi').classList.add('d-none');
+      } else {
+        row.remove();
       }
     }
+  });
+
+  // when product select changes: populate price and unit, or show new inputs
+  document.querySelector('#tblItems tbody').addEventListener('change', function(e){
+    if (e.target.classList.contains('product-select')) {
+      const row = e.target.closest('tr');
+      const opt = e.target.selectedOptions[0];
+      const priceInput = row.querySelector('.price-input');
+      const unitCell = row.querySelector('.unit-cell');
+      const newName = row.querySelector('.new-name');
+      const newDonvi = row.querySelector('.new-donvi');
+
+      if (opt.value === '0') {
+        // show new product fields
+        newName.classList.remove('d-none');
+        newDonvi.classList.remove('d-none');
+        priceInput.value = '';
+        unitCell.textContent = newDonvi.value || '-';
+      } else {
+        newName.classList.add('d-none');
+        newDonvi.classList.add('d-none');
+        const price = opt.dataset.price || 0;
+        const donvi = opt.dataset.donvi || '-';
+        priceInput.value = price;
+        unitCell.textContent = donvi;
+      }
+    }
+  });
+
+  // keep unit updated when user types new donvi
+  document.querySelector('#tblItems tbody').addEventListener('input', function(e){
+    if (e.target.classList.contains('new-donvi')) {
+      const row = e.target.closest('tr');
+      row.querySelector('.unit-cell').textContent = e.target.value || '-';
+    }
+  });
+
+  // before submit: validate and ensure arrays align
+  function prepareAndValidate() {
+    const rows = document.querySelectorAll('#tblItems tbody tr');
+    let ok = true;
+    let any = false;
+    rows.forEach((row, idx) => {
+      const pid = row.querySelector('select.product-select').value;
+      const qty = row.querySelector('.qty-input').value;
+      const price = row.querySelector('.price-input').value;
+      if ((pid === '0' || pid === '0') && row.querySelector('.new-name').classList.contains('d-none') === false) {
+        // new product -> require name
+        const newname = row.querySelector('.new-name').value.trim();
+        if (!newname) { alert('Vui lòng nhập tên sản phẩm mới ở dòng ' + (idx+1)); ok = false; return; }
+      }
+      if (!qty || parseInt(qty) <= 0) { alert('Số lượng phải > 0 ở dòng ' + (idx+1)); ok = false; return; }
+      if (price === '' || parseFloat(price) < 0) { if (!confirm('Giá chưa hợp lệ ở dòng ' + (idx+1) + '. Bạn muốn tiếp tục?')) { ok = false; return; } }
+      any = true;
+    });
+    if (!any) { alert('Vui lòng nhập ít nhất một dòng sản phẩm'); ok = false; }
+    return ok;
   }
-});
 </script>
+

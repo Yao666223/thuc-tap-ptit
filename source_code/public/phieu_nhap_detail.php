@@ -1,8 +1,8 @@
 <?php
-// phieu_nhap_detail.php
-include __DIR__ . '/../includes/session_check.php';
-include __DIR__ . '/../includes/db_connect.php';
-include __DIR__ . '/../includes/layouts/admin_layout.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+require_once __DIR__ . '/../includes/session_check.php';
+require_once __DIR__ . '/../includes/db_connect.php';
+require_once __DIR__ . '/../includes/layouts/admin_layout.php';
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id <= 0) {

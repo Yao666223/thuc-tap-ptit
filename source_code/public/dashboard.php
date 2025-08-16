@@ -1,7 +1,8 @@
 <?php
-include '../includes/session_check.php';
-include '../includes/layouts/admin_layout.php';
-include '../includes/db_connect.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+require_once __DIR__ . '/../includes/session_check.php';
+require_once __DIR__ . '/../includes/db_connect.php';
+require_once __DIR__ . '/../includes/layouts/admin_layout.php';
 
 // Thống kê dữ liệu
 $tong_san_pham = $conn->query("SELECT COUNT(*) AS total FROM san_pham")->fetch_assoc()['total'];

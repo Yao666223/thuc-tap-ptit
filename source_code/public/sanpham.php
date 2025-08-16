@@ -1,9 +1,10 @@
 <?php
 // Hiển thị danh sách sản phẩm, tìm kiếm, phân trang, link Thêm/Sửa/Xóa
 
-include '../includes/session_check.php';
-include '../includes/layouts/admin_layout.php';
-include '../includes/db_connect.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+require_once __DIR__ . '/../includes/session_check.php';
+require_once __DIR__ . '/../includes/db_connect.php';
+require_once __DIR__ . '/../includes/layouts/admin_layout.php';
 
 // Quyền: admin mới có quyền xóa/sửa thêm (có thể chỉnh nếu muốn)
 $isAdmin = isset($_SESSION['role']) && $_SESSION['role'] === 'admin';

@@ -1,8 +1,8 @@
 <?php
-// themsanpham.php
-include '../includes/session_check.php';    // đảm bảo session đã start và đã login
-include '../includes/layouts/admin_layout.php';
-include '../includes/db_connect.php';
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+require_once __DIR__ . '/../includes/session_check.php';
+require_once __DIR__ . '/../includes/db_connect.php';
+require_once __DIR__ . '/../includes/layouts/admin_layout.php';
 
 // Chỉ admin mới được thêm sản phẩm
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
